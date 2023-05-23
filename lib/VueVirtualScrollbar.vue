@@ -25,10 +25,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 declare const window: any;
 
-const props = defineProps<{ horizontal: boolean; id: string }>();
+const props =
+  defineProps<{ horizontal: boolean; target?: HTMLElement | string }>();
 
 // Ref element
 const wrapper = ref<HTMLElement>();
@@ -46,42 +47,113 @@ const scrollSize = ref<number>(0);
 
 const thumbSize = ref<number>(0);
 const trackSize = ref<number>(0);
-const elementScrollable = ref<HTMLElement>();
+const elementScrollable = ref<HTMLElement | undefined | null>();
 const haveScroll = ref<boolean>(false);
+const intervalScrollDisplay = ref<any>(null);
+
+watch(
+  () => props.target,
+  (val) => {
+    console.log(val);
+    removeEventScrollbar();
+    setElementScrollable(val);
+    initEventScrollbar();
+  }
+);
 
 onMounted(() => {
-  setTimeout(() => {
-    checkHaveScroll();
-    setTimeout(() => {
-      setSizeScrollbar();
-    }, 100);
-  }, 100);
+  removeEventScrollbar();
+  setElementScrollable(props.target);
+  initEventScrollbar();
 
-  elementScrollable.value = document.getElementById(props.id) as HTMLElement;
-  elementScrollable.value.addEventListener('scroll', handleScrollable);
   window.addEventListener('mousemove', handleMousemove);
   window.addEventListener('mouseup', handleMouseup);
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
-  elementScrollable.value.removeEventListener('scroll', handleScrollable);
+  removeEventScrollbar();
   window.removeEventListener('mousemove', handleMousemove);
   window.removeEventListener('mouseup', handleMouseup);
   window.removeEventListener('resize', handleResize);
 });
 
 /**
+ * Gắn element scrollable
+ * @createdby ntdung 23.05.2023
+ **/
+function setElementScrollable(val) {
+  if (val) {
+    if (typeof val == 'string') {
+      let element = document.querySelector(val);
+      if (element) elementScrollable.value = element;
+    } else {
+      elementScrollable.value = val;
+    }
+  }
+}
+
+/**
+ * Kiểm tra element có đang hiển thị
+ * @createdby ntdung 23.05.2023
+ **/
+function elementScrollableIsDisplay() {
+  if (elementScrollable.value) {
+    if (document.body.contains(elementScrollable.value)) {
+      return true;
+    } else {
+      return false;
+    }
+  } else return false;
+}
+
+/**
+ * Khởi tạo scrollbar
+ * @createdby ntdung 23.05.2023
+ **/
+function initEventScrollbar() {
+  if (elementScrollable.value) {
+    elementScrollable.value.addEventListener('scroll', handleScrollable);
+  }
+  intervalScrollDisplay.value = setInterval(() => {
+    if (!elementScrollableIsDisplay()) haveScroll.value = false;
+    else {
+      checkHaveScroll();
+      setSizeScrollbar();
+    }
+  }, 10);
+
+  setTimeout(() => {
+    checkHaveScroll();
+    setTimeout(() => {
+      setSizeScrollbar();
+    }, 100);
+  }, 100);
+}
+
+/**
+ * Xóa event scrollbar
+ * @createdby ntdung 23.05.2023
+ **/
+function removeEventScrollbar() {
+  if (elementScrollable.value)
+    elementScrollable.value.removeEventListener('scroll', handleScrollable);
+  clearInterval(intervalScrollDisplay.value);
+}
+
+/**
  * Xử lý sự kiện scroll
  * @createdby ntdung 23.05.2023
  **/
 function handleScrollable() {
-  if (props.horizontal) {
-    let scrollLeft = elementScrollable.value!.scrollLeft;
-    trackLeft.value = (scrollLeft / scrollSize.value) * thumbSize.value;
-  } else {
-    let scrollTop = elementScrollable.value!.scrollTop;
-    trackTop.value = (scrollTop / scrollSize.value) * thumbSize.value;
+  if (elementScrollable.value) {
+    if (props.horizontal) {
+      let scrollLeft = elementScrollable.value!.scrollLeft;
+      trackLeft.value = (scrollLeft / scrollSize.value) * thumbSize.value;
+    } else {
+      let scrollTop = elementScrollable.value!.scrollTop;
+      trackTop.value = (scrollTop / scrollSize.value) * thumbSize.value;
+    }
   }
 }
 
@@ -90,7 +162,7 @@ function handleScrollable() {
  * @createdby ntdung 23.05.2023
  **/
 function handleMousemove(e: any) {
-  if (movingTrack.value) {
+  if (movingTrack.value && elementScrollable.value) {
     clearSelection();
     var outWrapperVal = outWrapper(e);
     if (!outWrapperVal.out) {
@@ -149,40 +221,42 @@ function handleResize() {
   checkHaveScroll();
 }
 
-/** 
+/**
  * Xử lý khi click vào main scrollbar
  * @createdby ntdung 23.05.2023
  **/
 function mousedownMain(e: any) {
-  let size = track.value?.getBoundingClientRect() as DOMRect;
-  if (props.horizontal) {
-    if (e.clientX < size.left) {
-      var newLeft = trackLeft.value - trackSize.value;
-      trackLeft.value = newLeft ? newLeft : 0;
+  if (elementScrollable.value) {
+    let size = track.value?.getBoundingClientRect() as DOMRect;
+    if (props.horizontal) {
+      if (e.clientX < size.left) {
+        var newLeft = trackLeft.value - trackSize.value;
+        trackLeft.value = newLeft ? newLeft : 0;
+      }
+      if (e.clientX > size.right) {
+        var newLeft = trackLeft.value + trackSize.value;
+        trackLeft.value =
+          newLeft <= thumbSize.value - trackSize.value
+            ? newLeft
+            : thumbSize.value - trackSize.value;
+      }
+      elementScrollable.value!.scrollLeft =
+        (trackLeft.value / thumbSize.value) * scrollSize.value;
+    } else {
+      if (e.clientY < size.top) {
+        var newTop = trackTop.value - trackSize.value;
+        trackTop.value = newTop ? newTop : 0;
+      }
+      if (e.clientY > size.bottom) {
+        var newTop = trackTop.value + trackSize.value;
+        trackTop.value =
+          newTop <= thumbSize.value - trackSize.value
+            ? newTop
+            : thumbSize.value - trackSize.value;
+      }
+      elementScrollable.value!.scrollTop =
+        (trackTop.value / thumbSize.value) * scrollSize.value;
     }
-    if (e.clientX > size.right) {
-      var newLeft = trackLeft.value + trackSize.value;
-      trackLeft.value =
-        newLeft <= thumbSize.value - trackSize.value
-          ? newLeft
-          : thumbSize.value - trackSize.value;
-    }
-    elementScrollable.value!.scrollLeft =
-      (trackLeft.value / thumbSize.value) * scrollSize.value;
-  } else {
-    if (e.clientY < size.top) {
-      var newTop = trackTop.value - trackSize.value;
-      trackTop.value = newTop ? newTop : 0;
-    }
-    if (e.clientY > size.bottom) {
-      var newTop = trackTop.value + trackSize.value;
-      trackTop.value =
-        newTop <= thumbSize.value - trackSize.value
-          ? newTop
-          : thumbSize.value - trackSize.value;
-    }
-    elementScrollable.value!.scrollTop =
-      (trackTop.value / thumbSize.value) * scrollSize.value;
   }
 }
 
@@ -203,17 +277,18 @@ function mousedownTrack(e: any) {
  * createdby ntdung5 23.05.2023
  */
 function setSizeScrollbar() {
-  var scrollable = document.getElementById(props.id) as HTMLElement;
-  if (props.horizontal) {
-    clientSize.value = scrollable.clientWidth;
-    scrollSize.value = scrollable.scrollWidth;
-    thumbSize.value = wrapper.value?.getBoundingClientRect().width || 0;
-  } else {
-    clientSize.value = scrollable.clientHeight;
-    scrollSize.value = scrollable.scrollHeight;
-    thumbSize.value = wrapper.value?.getBoundingClientRect().height || 0;
+  if (elementScrollable.value) {
+    if (props.horizontal) {
+      clientSize.value = elementScrollable.value.clientWidth;
+      scrollSize.value = elementScrollable.value.scrollWidth;
+      thumbSize.value = wrapper.value?.getBoundingClientRect().width || 0;
+    } else {
+      clientSize.value = elementScrollable.value.clientHeight;
+      scrollSize.value = elementScrollable.value.scrollHeight;
+      thumbSize.value = wrapper.value?.getBoundingClientRect().height || 0;
+    }
+    trackSize.value = (clientSize.value / scrollSize.value) * thumbSize.value;
   }
-  trackSize.value = (clientSize.value / scrollSize.value) * thumbSize.value;
 }
 
 /**
