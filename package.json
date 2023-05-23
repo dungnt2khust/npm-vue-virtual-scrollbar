@@ -1,6 +1,6 @@
 {
-  "name": "vue-virtual-scrollbar",
-  "private": true,
+  "name": "@eddieonthecode/vue-virtual-scrollbar",
+  "private": false,
   "version": "1.0.3",
   "type": "module",
   "files": [
