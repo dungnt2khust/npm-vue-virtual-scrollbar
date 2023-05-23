@@ -82,11 +82,11 @@ onUnmounted(() => {
  * Gắn element scrollable
  * @createdby ntdung 23.05.2023
  **/
-function setElementScrollable(val) {
+function setElementScrollable(val : HTMLElement | undefined | string) {
   if (val) {
     if (typeof val == 'string') {
       let element = document.querySelector(val);
-      if (element) elementScrollable.value = element;
+      if (element) elementScrollable.value = element as HTMLElement;
     } else {
       elementScrollable.value = val;
     }
