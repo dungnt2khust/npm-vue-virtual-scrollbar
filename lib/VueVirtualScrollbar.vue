@@ -30,7 +30,7 @@ declare const window: any;
 
 const props =
   defineProps<{ horizontal: boolean; target?: HTMLElement | string }>();
-
+const emit = defineEmits(['positionChanged'])
 // Ref element
 const wrapper = ref<HTMLElement>();
 const track = ref<HTMLElement>();
@@ -50,6 +50,7 @@ const trackSize = ref<number>(0);
 const elementScrollable = ref<HTMLElement | undefined | null>();
 const haveScroll = ref<boolean>(false);
 const intervalScrollDisplay = ref<any>(null);
+const elementScrollablePosition = ref<any>({});
 
 watch(
   () => props.target,
@@ -120,6 +121,15 @@ function initEventScrollbar() {
     else {
       checkHaveScroll();
       setSizeScrollbar();
+    }
+    // Watch vị trí của element scrollable
+    if (elementScrollable.value) {
+      let rect = elementScrollable.value.getBoundingClientRect();
+      let position = {left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom};
+      if (JSON.stringify(position) != JSON.stringify(elementScrollablePosition.value)) {
+        elementScrollablePosition.value = position;
+        emit('positionChanged', position);
+      }
     }
   }, 10);
 

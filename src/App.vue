@@ -16,6 +16,10 @@ function setScroll() {
   }
   count.value++;
 }
+
+function positionChanged(newPosition) {
+  console.log(newPosition);
+}
 </script>
 
 <template>
@@ -104,6 +108,7 @@ function setScroll() {
     <VueVirtualScrollbar
       :horizontal="true"
       target="#scrollable"
+      @positionChanged="positionChanged"
     ></VueVirtualScrollbar>
     <VueVirtualScrollbar
       style="position: absolute; top: 0; bottom: 0; right: 0"
