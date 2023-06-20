@@ -1,4 +1,9 @@
-# vue-virtual-scrollable  
+# vue-virtual-scrollbar  
+
+```js
+import { VueVirtualScrollbar } from '@eddieonthecode/vue-virtual-scrollbar';
+import '@eddieonthecode/vue-virtual-scrollbar/dist/style.css';
+```
 
 ```html
 <!-- Use CSS Selector -->
